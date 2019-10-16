@@ -1,0 +1,57 @@
+.clayout {
+	position: relative;
+	height: 100vh;
+	z-index: 1;
+	padding-top: 70px;
+	&:before {
+		height: 200px;
+		top: 0;
+		content: "";
+		width: 100%;
+		position: absolute;
+		background: #000;
+		z-index: -1;
+	}
+	&__content {
+		max-width: 1200px;
+		margin: auto;
+		background: #fff;
+		box-shadow: 0 0 9px rgba(0, 0, 0, 0.14);
+	}
+}
+
+.chat {
+	height: 800px;
+	display: flex;
+	flex-direction: column;
+	&__header {
+		min-height: 5px;
+		background: #859fff;
+	}
+	&__body {
+		flex: 1;
+		overflow: auto;
+	}
+	&__footer {
+		border-top: 1px solid #ddd;
+	}
+	&__control {
+		display: flex;
+	}
+	&__input {
+		flex: 1;
+		border: none;
+		outline: none;
+		background: transparent;
+		padding: 6px 10px;
+		height: 60px;
+		font-size: 17px;
+		letter-spacing: 1.3px;
+	}
+	&__control-btn {
+		background: transparent;
+		border: none;
+		outline: none;
+		color: #000;
+	}
+}
