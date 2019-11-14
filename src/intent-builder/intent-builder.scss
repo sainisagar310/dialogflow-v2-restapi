@@ -1,0 +1,35 @@
+#content {
+	display: flex;
+	justify-content: center;
+}
+
+.conversation-box {
+	stroke: #3a93a1;
+	stroke-width: 4px;
+	fill: #fff;
+}
+
+path {
+	stroke: #ddd;
+	fill: none;
+}
+
+line {
+	stroke: #3a93a1;
+}
+
+.g-dialogflow {
+	stroke: #ddd;
+	stroke-width: 5px;
+	fill: #eaeaea;
+	&__name {
+		fill: #3a93a1;
+		font-weight: 600;
+		font-size: 20px;
+	}
+	&__action {
+		font-size: 50px;
+		fill: #6b9dff;
+		cursor: pointer;
+	}
+}
