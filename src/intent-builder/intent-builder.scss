@@ -3,12 +3,6 @@
 	justify-content: center;
 }
 
-.conversation-box {
-	stroke: #3a93a1;
-	stroke-width: 4px;
-	fill: #fff;
-}
-
 path {
 	stroke: #ddd;
 	fill: none;
@@ -19,9 +13,11 @@ line {
 }
 
 .g-dialogflow {
-	stroke: #ddd;
-	stroke-width: 5px;
-	fill: #eaeaea;
+	&__item {
+		stroke: #ddd;
+		stroke-width: 5px;
+		fill: #eaeaea;
+	}
 	&__name {
 		fill: #3a93a1;
 		font-weight: 600;
@@ -31,5 +27,53 @@ line {
 		font-size: 50px;
 		fill: #6b9dff;
 		cursor: pointer;
+	}
+}
+
+.g-dialog {
+	&__item {
+		stroke: #3a93a1;
+		stroke-width: 4px;
+		fill: #fff;
+		&--dropping {
+			stroke: #f00;
+		}
+	}
+	&__action {
+		fill: blue;
+		font-weight: 600;
+		cursor: pointer;
+	}
+	&__name {
+		cursor: pointer;
+		font-weight: 600;
+		fill: #000;
+	}
+}
+
+.g-intent {
+	&__item {
+		stroke: #dcdcdc;
+		stroke-width: 2px;
+		fill: #fff;
+	}
+	&__drag {
+		cursor: all-scroll;
+		fill: #253979;
+		transition: 0.2s;
+
+		&--selected {
+			stroke: #7e89ad;
+			stroke-width: 4px;
+			pointer-events: none;
+		}
+	}
+	&__connection {
+		stroke: #ddd;
+		stroke-width: 2px;
+		&:hover {
+			stroke-width: 4px;
+			stroke: rgb(168, 214, 137);
+		}
 	}
 }

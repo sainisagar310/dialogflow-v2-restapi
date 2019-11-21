@@ -85,6 +85,7 @@ export interface IntentModel extends IBase {
 	NextDialogId: string;
 	Order?: number;
 	type: NodeType;
+	ImageUrl: string;
 }
 
 export enum NodeType {
