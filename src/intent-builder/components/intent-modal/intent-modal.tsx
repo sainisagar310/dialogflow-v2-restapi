@@ -2,7 +2,7 @@ import { IntentModel, NodeType, UtteranceModel } from "@app/intent-builder/inten
 import { IOptional } from "@app/utills/types";
 import { Divider, Empty, Icon, Input, List, Modal, Typography } from "antd";
 import Form, { FormComponentProps } from "antd/lib/form";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
 interface IntentModalProps extends FormComponentProps {
 	visible: boolean;
