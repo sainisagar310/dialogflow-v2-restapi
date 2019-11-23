@@ -1,13 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { IntentModal } from "./components/intent-modal/intent-modal";
 import "./intent-builder.scss";
-import { DialogFlowTreeModel, StaticData } from "./data";
+import { DialogFlowTreeNode, DialogFlowData } from "./data";
 import { NodeType, DialogModel, IntentModel } from "./intent-builder.interface";
 import { DialogModal } from "./components/dialog-modal/dialog-modal";
 import { IOptional } from "@app/utills/types";
+import Axios from "axios";
+
+Axios.defaults.baseURL = "https://localhost:44389/api";
 
 declare var d3: any;
 let SVG_GROUP: any;
+let dataStructure: any;
+let treeStructure: any;
+let information: any;
+let descendants: any;
+let links: any;
 
 interface IConnection {
 	DialogId: string;
@@ -17,9 +25,9 @@ interface IConnection {
 interface IntentBuilderProps {}
 export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
 	const [dialogForm, setDialogForm] = useState<{ visible: boolean; data: IOptional<DialogModel> }>({ visible: false, data: {} });
-	const [intentForm, setIntentForm] = useState<{ dialogId: string; visible: boolean }>({ dialogId: null, visible: false });
+	const [intentForm, setIntentForm] = useState<{ data: IOptional<IntentModel>; visible: boolean }>({ data: {}, visible: false });
 
-	const [data, setData] = useState<DialogFlowTreeModel[]>(StaticData);
+	const [data, setData] = useState<DialogFlowTreeNode[]>([]);
 
 	const viewerWidth = window.innerWidth;
 	const viewerHeight = window.innerHeight;
@@ -30,43 +38,38 @@ export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
 	const intentBoxSize = { width: 200, height: 120, halfW: 100, halfH: 60 };
 	const connections: IConnection[] = [];
 
-	const grabMultiConnection = (d: DialogFlowTreeModel, isHead?: boolean): void => {
-		const intents = data.filter(a => a.NextDialogId === d.Id);
-		if (isHead || intents.length > 1) {
-			intents.forEach((intent, i) => {
-				if (isHead || i > 0) {
-					connections.push({ DialogId: d.Id, IntentId: intent.Id });
-				}
-			});
-		}
-	};
-
-	const dataStructure = d3
-		.stratify()
-		.id((d: DialogFlowTreeModel) => d.Id)
-		.parentId((d: DialogFlowTreeModel) => {
-			if (d.type === NodeType.DialogFlow) {
-				return null;
-			}
-			if (d.type === NodeType.Dialog && d.IsHead) {
-				grabMultiConnection(d, true);
-				return d.DialogFlowId;
-			}
-			if (d.type === NodeType.Dialog) {
-				const intent = data.find(a => a.NextDialogId === d.Id);
-				grabMultiConnection(d);
-				return intent.Id;
-			}
-			if (d.type === NodeType.Intent) {
-				return d.DialogId;
-			}
-		})(data);
-	const treeStructure = d3.tree().size([viewerWidth, viewerHeight]);
-	const information = treeStructure(dataStructure);
-	const descendants = information.descendants();
-	const links = information.links();
+	useEffect(() => {
+		insertSVG();
+		getDialogFlow().then(res => {
+			setData(res.data.dialogFlow);
+		});
+	}, []);
 
 	useEffect(() => {
+		if (data && !!data.length) {
+			/**
+			 * Clean SVG contents
+			 */
+			clearSvg();
+
+			initializeTree();
+
+			/**
+			 * Re-render SVG elements
+			 */
+			renderConnections();
+			renderMultiConnections();
+			renderDialogFlow();
+			renderDialogs();
+			renderIntents();
+		}
+	}, [data]);
+
+	const getDialogFlow = () => {
+		return Axios.get<DialogFlowData>("/Talkmode/GetTalkModeForUI");
+	};
+
+	const insertSVG = () => {
 		const svg = d3
 			.select("#content")
 			.append("svg")
@@ -80,26 +83,54 @@ export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
 				SVG_GROUP.attr("transform", d3.event.transform);
 			});
 		svg.call(zoomListener);
-	}, []);
+	};
 
-	useEffect(() => {
-		/**
-		 * Clean SVG contents
-		 */
-		clearSvg();
+	const initializeTree = () => {
+		dataStructure = d3
+			.stratify()
+			.id((d: DialogFlowTreeNode) => d.id)
+			.parentId((d: DialogFlowTreeNode) => {
+				if (d.type === NodeType.DialogFlow) {
+					return null;
+				}
+				if (d.type === NodeType.Dialog && d.isHead) {
+					grabMultiConnection(d, true);
+					return data.find(node => node.type === NodeType.DialogFlow).id;
+				}
+				if (d.type === NodeType.Dialog) {
+					const intent = data.find(a => a.nextDialogId === d.id);
+					grabMultiConnection(d);
+					return intent.id;
+				}
+				if (d.type === NodeType.Intent) {
+					return d.dialogId;
+				}
+			})(data);
+		treeStructure = d3.tree().size([viewerWidth, viewerHeight]);
+		information = treeStructure(dataStructure);
+		descendants = information.descendants();
+		links = information.links();
+	};
 
-		/**
-		 * Re-render SVG elements
-		 */
-		renderConnections();
-		renderMultiConnections();
-		renderDialogFlow();
-		renderDialogs();
-		renderIntents();
-	}, [data]);
+	const grabMultiConnection = (d: DialogFlowTreeNode, isHead?: boolean): void => {
+		const intents = data.filter(a => a.nextDialogId === d.id);
+		const skipFirstIntent = !isHead;
+		const hasMultipleIntents = intents.length > 1;
+		if (!skipFirstIntent || hasMultipleIntents) {
+			intents.forEach((intent, i) => {
+				const isSkipped = skipFirstIntent && i === 0;
+				if (!isSkipped) {
+					console.log({ DialogId: d.id, IntentId: intent.id });
+					connections.push({ DialogId: d.id, IntentId: intent.id });
+				}
+			});
+		}
+	};
 
 	const clearSvg = (): void => {
-		SVG_GROUP.selectAll("*").remove();
+		if (SVG_GROUP) {
+			SVG_GROUP.selectAll("*").remove();
+		}
 	};
 
 	const renderConnections = (): void => {
@@ -120,10 +151,10 @@ export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
 	const renderMultiConnections = (): void => {
 		const connectionData = links
 			.map((l: any) => {
-				const d: DialogFlowTreeModel = l.target.data;
+				const d: DialogFlowTreeNode = l.target.data;
 				const isIntent = d.type === NodeType.Intent;
 				if (isIntent) {
-					const connectionIndex = connections.findIndex(c => c.IntentId === d.Id);
+					const connectionIndex = connections.findIndex(c => c.IntentId === d.id);
 					if (connectionIndex !== -1) {
 						l.connection = { ...connections[connectionIndex] };
 						l.connection.index = connectionIndex;
@@ -188,7 +219,7 @@ export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
 		dialogView
 			.append("path")
 			.attr("d", d => {
-				const data = d.data as DialogFlowTreeModel;
+				const data = d.data as DialogFlowTreeNode;
 				if (data.type === NodeType.DialogFlow) {
 					return "";
 				}
@@ -202,7 +233,7 @@ export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
 			.append("text")
 			.text(d => {
 				// return d.data.Id;
-				const text = d.data.Value;
+				const text = d.data.value;
 				if (text.length <= charThreshold) return text;
 				return text.substr(0, charThreshold).concat("...");
 			})
@@ -217,7 +248,7 @@ export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
 			.attr("x", d => d.x + 65)
 			.attr("y", d => d.depth * 200 + (dialogHeight - 20))
 			.attr("class", "g-dialog__action")
-			.on("click", addIntentModal);
+			.on("click", openIntentModal);
 	};
 
 	const renderIntents = (): void => {
@@ -230,7 +261,7 @@ export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
 		intentView
 			.append("path")
 			.attr("d", d => {
-				const data = d.data as DialogFlowTreeModel;
+				const data = d.data as DialogFlowTreeNode;
 				if (data.type === NodeType.DialogFlow) {
 					return "";
 				}
@@ -241,10 +272,11 @@ export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
 			.attr("class", "g-intent__item");
 		intentView
 			.append("text")
-			.text(d => d.data.Value)
+			.text(d => d.data.value)
 			.attr("x", d => d.x - intentBoxSize.halfW + 30)
 			.attr("y", d => d.depth * 200 + intentBoxSize.halfH)
-			.attr("class", "g-dialog__name");
+			.attr("class", "g-dialog__name")
+			.on("click", openIntentModal);
 
 		const getDropableDialog = (): [DialogModel, any] => {
 			const source = d3.event.sourceEvent.target;
@@ -289,12 +321,12 @@ export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
 				const [dialog] = getDropableDialog();
 				const intent = d.data as IntentModel;
 
-				if (dialog && intent.NextDialogId !== dialog.Id) {
+				if (dialog && intent.nextDialogId !== dialog.id) {
 					let newData = [...data];
-					const intentIndex = newData.findIndex(n => n.type === NodeType.Intent && n.Id === intent.Id);
+					const intentIndex = newData.findIndex(n => n.type === NodeType.Intent && n.id === intent.id);
 					if (intentIndex !== -1) {
 						const intent = newData[intentIndex] as IntentModel;
-						const node = { ...intent, NextDialogId: dialog.Id };
+						const node = { ...intent, nextDialogId: dialog.id } as IntentModel;
 
 						newData.splice(intentIndex, 1);
 						newData.push(node);
@@ -304,7 +336,7 @@ export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
 							if (!confirm("The intent, you are connecting to another dialog, it has dependent children. By clicking 'confirm' they would be deleted.")) {
 								return null;
 							}
-							newData = deleteNode(newData, intent.NextDialogId);
+							newData = deleteNode(newData, intent.nextDialogId);
 						}
 						setData(newData);
 					}
@@ -321,118 +353,84 @@ export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
 	};
 
 	const checkIfHasDependentChildren = (intent: IntentModel) => {
-		const nextDialog = data.find(n => n.type === NodeType.Dialog && n.Id === intent.NextDialogId);
+		const nextDialog = data.find(n => n.type === NodeType.Dialog && n.id === intent.nextDialogId);
 		if (nextDialog) {
-			const nextDialogParents = data.filter(n => n.NextDialogId === nextDialog.Id);
+			const nextDialogParents = data.filter(n => n.nextDialogId === nextDialog.id);
 			return nextDialogParents.length < 2;
 		}
 		return false;
 	};
 
-	const openDialogForm = (d: any) => {
-		const data = d.data as DialogFlowTreeModel;
-		const isHead = !data.DialogFlowId;
-		if (isHead) {
-			setDialogForm({ visible: true, data: { DialogFlowId: data.Id, IsHead: true } });
-		} else {
-			setDialogForm({ visible: true, data });
-		}
+	const openDialogForm = (d: { data: DialogFlowTreeNode }) => {
+		const node = d.data;
+		const isHead = node.type === NodeType.DialogFlow || node.isHead;
+		const isDialog = node.type === NodeType.Dialog;
+		const dialog = isDialog ? node : ({} as DialogModel);
+		setDialogForm({ visible: true, data: { ...dialog, isHead } });
 	};
 
 	const closeDialogForm = (): void => {
 		setDialogForm({ visible: false, data: {} });
 	};
 
-	const onDialogCreate = (dialog: DialogModel, intents?: IntentModel[]): void => {
-		/**
-		 * Building intents based on options of a dialog
-		 */
-		let intentsData = [];
-		if (!!intents) {
-			intents.forEach(i => {
-				intentsData.push(
-					...buildIntent({
-						...i,
-						Id: Math.random()
-							.toString(36)
-							.substring(2, 15),
-						DialogId: dialog.Id,
-						type: NodeType.Intent
-					})
-				);
-			});
-		}
-
-		/**
-		 * Updating dialog with its intents
-		 */
-		const index = data.findIndex(d => d.Id === dialog.Id);
-		const isNew = index === -1;
+	const onDialogCreate = (dialog: DialogModel): void => {
+		const dialogIndex = data.findIndex(d => d.id === dialog.id);
+		const isNew = dialogIndex === -1;
+		const newData = [...data];
 		if (!isNew) {
-			let newData = [...data];
-
-			/**
-			 * Removing existing dialog
-			 */
-			newData.splice(index, 1);
-
-			/**
-			 * Removing its options
-			 */
-			const options = data.filter(d => d.DialogId === dialog.Id && d.type === NodeType.Intent && !!d.ImageUrl);
-			options.forEach(option => {
-				newData = deleteNode(newData, option.Id);
-			});
-
-			/**
-			 * Saving the data
-			 */
-			setData([...newData, dialog, ...intentsData]);
-		} else {
-			setData([...data, dialog, ...intentsData]);
+			newData.splice(dialogIndex, 1);
 		}
-
+		setData([...newData, dialog]);
 		closeDialogForm();
 	};
 
 	const buildDefaultDialog = (): DialogModel => {
 		return {
-			Id: Math.random()
+			id: Math.random()
 				.toString(36)
 				.substring(2, 15),
-			DialogFlowId: data.find(a => a.type === NodeType.DialogFlow).Id,
 			type: NodeType.Dialog,
-			Value: "Default",
-			IsHead: false
+			value: "Default",
+			isHead: false
 		};
 	};
 
-	const addIntentModal = (d: any): void => {
-		const data = d.data as DialogModel;
-		setIntentForm({ visible: true, dialogId: data.Id });
+	const openIntentModal = (d: { data: DialogFlowTreeNode }): void => {
+		const data = d.data as DialogFlowTreeNode;
+		const isIntent = data.type === NodeType.Intent;
+		const intent = isIntent ? data : {};
+		setIntentForm({ visible: true, data: { dialogId: data.id, ...intent } });
 	};
 
 	const closeIntentModal = (): void => {
-		setIntentForm({ visible: false, dialogId: null });
+		setIntentForm({ visible: false, data: {} });
 	};
 
-	const buildIntent = (intent: IntentModel): DialogFlowTreeModel[] => {
+	const buildIntent = (intent: IntentModel): DialogFlowTreeNode[] => {
 		const defaultDialog = buildDefaultDialog();
-		intent.NextDialogId = defaultDialog.Id;
+		intent.nextDialogId = defaultDialog.id;
 		return [defaultDialog, intent];
 	};
 
 	const onIntentCreate = (intent: IntentModel): void => {
-		const intentData = buildIntent(intent);
-		setData([...data, ...intentData]);
+		const intentIndex = data.findIndex(d => d.id === intent.id);
+		const isNew = intentIndex === -1;
+		const newData = [...data];
+		if (!isNew) {
+			newData[intentIndex] = intent;
+			setData(newData);
+		} else {
+			const intentData = buildIntent(intent);
+			setData([...newData, ...intentData]);
+		}
 		closeIntentModal();
 	};
 
-	const dialogWithMultipleParents = (nodes: DialogFlowTreeModel[], nodeIds: string[]): string[] => {
+	const dialogWithMultipleParents = (nodes: DialogFlowTreeNode[], nodeIds: string[]): string[] => {
 		const ids = nodeIds.filter(nodeId => {
-			const node = nodes.find(n => n.Id === nodeId);
+			const node = nodes.find(n => n.id === nodeId);
 			if (node.type === NodeType.Dialog) {
-				const isDialogHasMultiChildren = nodes.filter(n => n.type === NodeType.Intent && n.NextDialogId === node.Id);
+				const isDialogHasMultiChildren = nodes.filter(n => n.type === NodeType.Intent && n.nextDialogId === node.id);
 				if (isDialogHasMultiChildren.length > 1) {
 					return false;
 				}
@@ -442,7 +440,7 @@ export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
 		return ids;
 	};
 
-	const deleteNode = (nodes: DialogFlowTreeModel[], id: string): DialogFlowTreeModel[] => {
+	const deleteNode = (nodes: DialogFlowTreeNode[], id: string): DialogFlowTreeNode[] => {
 		const node = descendants.find(d => d.id === id);
 		let ids = [node.id];
 		const findChildrenIds = node => {
@@ -455,7 +453,7 @@ export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
 		};
 		findChildrenIds(node);
 		ids = dialogWithMultipleParents(nodes, ids);
-		return nodes.filter(n => ids.findIndex(id => id === n.Id) === -1);
+		return nodes.filter(n => ids.findIndex(id => id === n.id) === -1);
 	};
 
 	return (

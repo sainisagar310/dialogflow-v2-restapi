@@ -3,15 +3,6 @@
 	justify-content: center;
 }
 
-path {
-	stroke: #ddd;
-	fill: none;
-}
-
-line {
-	stroke: #3a93a1;
-}
-
 .g-dialogflow {
 	&__item {
 		stroke: #ddd;
@@ -71,6 +62,7 @@ line {
 	&__connection {
 		stroke: #ddd;
 		stroke-width: 2px;
+		fill: none;
 		&:hover {
 			stroke-width: 4px;
 			stroke: rgb(168, 214, 137);
