@@ -3,6 +3,6 @@ import { IOptional } from "@app/utills/types";
 
 export type DialogFlowTreeNode = IOptional<DialogFlowModel> & IOptional<DialogModel> & IOptional<IntentModel>;
 
-export interface DialogFlowData extends DialogFlowModel {
+export interface DialogFlowResponse extends DialogFlowModel {
 	dialogFlow: DialogFlowTreeNode[];
 }

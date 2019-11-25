@@ -1,13 +1,24 @@
 import React, { useEffect, useState } from "react";
 import { IntentModal } from "./components/intent-modal/intent-modal";
 import "./intent-builder.scss";
-import { DialogFlowTreeNode, DialogFlowData } from "./data";
-import { NodeType, DialogModel, IntentModel } from "./intent-builder.interface";
+import { DialogFlowTreeNode, DialogFlowResponse } from "./data";
+import { NodeType, DialogModel, IntentModel, DialogFlowModel } from "./intent-builder.interface";
 import { DialogModal } from "./components/dialog-modal/dialog-modal";
 import { IOptional } from "@app/utills/types";
 import Axios from "axios";
+import { Layout, Typography, Row, Col, Button, Icon, Dropdown, Menu } from "antd";
+import { DialogflowModal } from "./components/dialogflow-modal/dialogflow-modal";
+
+const { Header, Content } = Layout;
 
 Axios.defaults.baseURL = "https://localhost:44389/api";
+
+const Apis = {
+	GetDialogFlowList: "/Talkmode/GetTalkModeList",
+	GetDialogFlow: "/Talkmode/GetTalkModeUI",
+	UpdateDialogFlow: "/Talkmode/PutTalkMode",
+	CreateDialogFlow: "/Talkmode/PostTalkMode"
+};
 
 declare var d3: any;
 let SVG_GROUP: any;
@@ -24,13 +35,20 @@ interface IConnection {
 
 interface IntentBuilderProps {}
 export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
+	const [dialogflowForm, setDialogflowForm] = useState<{ data: IOptional<DialogFlowModel>; visible: boolean }>({ data: {}, visible: false });
 	const [dialogForm, setDialogForm] = useState<{ visible: boolean; data: IOptional<DialogModel> }>({ visible: false, data: {} });
 	const [intentForm, setIntentForm] = useState<{ data: IOptional<IntentModel>; visible: boolean }>({ data: {}, visible: false });
 
+	const [dialogFlowInfo, setDialogFlowInfo] = useState<DialogFlowModel>(null);
 	const [data, setData] = useState<DialogFlowTreeNode[]>([]);
 
+	const [loading, setLoading] = useState<boolean>(false);
+
+	const [dialogflowList, setDialogflowList] = useState<DialogFlowModel[]>([]);
+	const [dialogflowListLoading, setDialogflowListLoading] = useState<boolean>(false);
+
 	const viewerWidth = window.innerWidth;
-	const viewerHeight = window.innerHeight;
+	const viewerHeight = window.innerHeight - 64;
 
 	const dialogWidth = 270;
 	const dialogHeight = 90;
@@ -39,19 +57,17 @@ export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
 	const connections: IConnection[] = [];
 
 	useEffect(() => {
+		getDialogflowList();
 		insertSVG();
-		getDialogFlow().then(res => {
-			setData(res.data.dialogFlow);
-		});
 	}, []);
 
 	useEffect(() => {
-		if (data && !!data.length) {
-			/**
-			 * Clean SVG contents
-			 */
-			clearSvg();
+		/**
+		 * Clean SVG contents
+		 */
+		clearSvg();
 
+		if (data && !!data.length) {
 			initializeTree();
 
 			/**
@@ -65,8 +81,26 @@ export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
 		}
 	}, [data]);
 
-	const getDialogFlow = () => {
-		return Axios.get<DialogFlowData>("/Talkmode/GetTalkModeForUI");
+	const loadDialogflow = (id: string) => {
+		setLoading(true);
+		getDialogFlow(id)
+			.then(res => {
+				setDialogflowData(res.data);
+				setLoading(false);
+			})
+			.catch(() => {
+				setLoading(false);
+			});
+	};
+
+	const setDialogflowData = (data: DialogFlowResponse) => {
+		const { id, name, description, unit, order, type, dialogFlow } = data;
+		setDialogFlowInfo({ id, name, value: name, description, unit, order, type });
+		setData(dialogFlow);
+	};
+
+	const getDialogFlow = (id: string) => {
+		return Axios.get<DialogFlowResponse>(`${Apis.GetDialogFlow}/${id}`);
 	};
 
 	const insertSVG = () => {
@@ -120,7 +154,6 @@ export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
 			intents.forEach((intent, i) => {
 				const isSkipped = skipFirstIntent && i === 0;
 				if (!isSkipped) {
-					console.log({ DialogId: d.id, IntentId: intent.id });
 					connections.push({ DialogId: d.id, IntentId: intent.id });
 				}
 			});
@@ -189,22 +222,23 @@ export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
 		dialogFlowView
 			.append("circle")
 			.attr("cx", d => d.x)
-			.attr("cy", d => d.y + 50)
+			.attr("cy", d => d.y + 65)
 			.attr("r", 50)
 			.attr("class", "g-dialogflow__item");
 
 		dialogFlowView
 			.append("text")
-			.text(d => d.data.Name)
+			.text(d => d.data.value)
 			.attr("x", d => d.x + 50 + 20)
-			.attr("y", d => d.depth * 200 + 50)
-			.attr("class", "g-dialogflow__name");
+			.attr("y", d => d.depth * 200 + 65)
+			.attr("class", "g-dialogflow__name")
+			.on("click", openDialogflowModal);
 		if (descendants.length === 1) {
 			dialogFlowView
 				.append("text")
 				.text(d => "+")
 				.attr("x", d => d.x - 17)
-				.attr("y", d => d.depth * 200 + 50 + 12)
+				.attr("y", d => d.depth * 200 + 50 + 27)
 				.attr("class", "g-dialogflow__action")
 				.on("click", openDialogForm);
 		}
@@ -456,11 +490,109 @@ export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
 		return nodes.filter(n => ids.findIndex(id => id === n.id) === -1);
 	};
 
+	const onDialogflowCreate = (dialogflow: DialogFlowModel): void => {
+		setDialogFlowInfo({ ...dialogflow, name: dialogflow.value });
+		const index = data.findIndex(node => node.type === NodeType.DialogFlow);
+		const newData = [...data];
+		if (index !== -1) {
+			newData[index] = dialogflow;
+		} else {
+			newData.push(dialogflow);
+		}
+		setData(newData);
+		closeDialogflowModal();
+	};
+
+	const closeDialogflowModal = (): void => {
+		setDialogflowForm({ data: {}, visible: false });
+	};
+
+	const openDialogflowModal = (): void => {
+		setDialogflowForm({ data: dialogFlowInfo ? dialogFlowInfo : {}, visible: true });
+	};
+
+	const saveDialogFlow = (): void => {
+		const isNew = dialogFlowInfo.id.length < 15;
+		const call = isNew
+			? Axios.post<DialogFlowResponse>(Apis.CreateDialogFlow, { ...dialogFlowInfo, dialogFlow: data })
+			: Axios.put<DialogFlowResponse>(Apis.UpdateDialogFlow, { ...dialogFlowInfo, dialogFlow: data });
+		call
+			.then(res => {
+				setDialogflowData(res.data);
+			})
+			.catch(err => {
+				console.log(err);
+			});
+	};
+
+	const getDialogflowList = () => {
+		setDialogflowListLoading(true);
+		Axios.get<DialogFlowModel[]>(Apis.GetDialogFlowList)
+			.then(res => {
+				setDialogflowListLoading(false);
+				setDialogflowList(res.data as DialogFlowModel[]);
+			})
+			.catch(err => {
+				setDialogflowListLoading(false);
+			});
+	};
+
+	const discardDialogflow = () => {
+		setData([]);
+		setDialogFlowInfo(null);
+	};
+
+	const renderMenu = (): React.ReactNode => {
+		return (
+			<Menu>
+				{dialogflowList.map(({ name, id }) => (
+					<Menu.Item key={id} onClick={() => loadDialogflow(id)}>
+						{name}
+					</Menu.Item>
+				))}
+			</Menu>
+		);
+	};
+
 	return (
-		<>
-			<div id="content"></div>
-			<DialogModal {...dialogForm} onClose={closeDialogForm} onCreate={onDialogCreate} />
-			<IntentModal {...intentForm} onClose={closeIntentModal} onCreate={onIntentCreate} />
-		</>
+		<Layout>
+			<Header style={{ padding: "0 20px" }}>
+				<Row type="flex" justify="space-between" align="middle">
+					<Col>
+						<Typography.Title level={4} style={{ marginBottom: 2, color: "#d8d8d8" }}>
+							{dialogFlowInfo && dialogFlowInfo.name}
+						</Typography.Title>
+					</Col>
+					<Col>
+						{dialogFlowInfo && (
+							<>
+								<Button icon="arrow-left" ghost onClick={discardDialogflow} style={{ marginRight: 8 }} type="danger">
+									Back
+								</Button>
+								<Button icon="save" ghost onClick={saveDialogFlow}>
+									Save
+								</Button>
+							</>
+						)}
+						{!dialogFlowInfo && !loading && (
+							<Dropdown.Button icon={<Icon type={dialogflowListLoading ? "loading" : "down"} />} onClick={openDialogflowModal} overlay={renderMenu()}>
+								<Icon type="plus" /> New
+							</Dropdown.Button>
+						)}
+					</Col>
+				</Row>
+			</Header>
+			<Content>
+				{loading && (
+					<div className="tm-loader">
+						<Icon type="loading" className="tm-loader__icon" />
+					</div>
+				)}
+				<div id="content"></div>
+				<DialogflowModal {...dialogflowForm} onClose={closeDialogflowModal} onCreate={onDialogflowCreate} />
+				<DialogModal {...dialogForm} onClose={closeDialogForm} onCreate={onDialogCreate} />
+				<IntentModal {...intentForm} onClose={closeIntentModal} onCreate={onIntentCreate} />
+			</Content>
+		</Layout>
 	);
 };

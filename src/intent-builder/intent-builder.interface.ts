@@ -4,6 +4,7 @@ export interface IBase {
 
 export interface DialogFlowModel extends IBase {
 	name: string;
+	value: string;
 	description: string;
 	unit?: number;
 	order?: number;

@@ -13,6 +13,7 @@
 		fill: #3a93a1;
 		font-weight: 600;
 		font-size: 20px;
+		cursor: pointer;
 	}
 	&__action {
 		font-size: 50px;
@@ -67,5 +68,13 @@
 			stroke-width: 4px;
 			stroke: rgb(168, 214, 137);
 		}
+	}
+}
+
+.tm-loader {
+	padding: 50px 0;
+	text-align: center;
+	&__icon {
+		font-size: 30px;
 	}
 }

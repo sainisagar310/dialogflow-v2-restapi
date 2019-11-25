@@ -2,7 +2,9 @@
     "compilerOptions": {
         "baseUrl": ".",
         "paths": {
-            "@app/*": ["src/*"]
+            "@app/*": [
+                "src/*"
+            ]
         },
         "moduleResolution": "node",
         "module": "commonjs",
@@ -15,10 +17,21 @@
         "removeComments": true,
         "skipDefaultLibCheck": true,
         "skipLibCheck": true,
-        "lib": ["dom", "es5", "scripthost", "es2015", "es2017"],
+        "lib": [
+            "dom",
+            "es5",
+            "scripthost",
+            "es2015",
+            "es2017"
+        ],
         "allowSyntheticDefaultImports": true,
         "esModuleInterop": true,
         "experimentalDecorators": true
     },
-    "exclude": ["**/*.test.ts", "**/*.test.tsx", "node_modules", "dist"]
+    "exclude": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "node_modules",
+        "dist"
+    ]
 }
