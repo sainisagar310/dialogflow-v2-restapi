@@ -1,0 +1,36 @@
+{
+	"displayName": "Sleeping",
+	"messages": [
+		{
+			"text": {
+				"text": ["Yes!  Marvin is sleeping! Do you think it is time for him to wake up?"]
+			}
+		}
+	],
+	"trainingPhrases": [
+		{
+			"parts": [
+				{
+					"text": "he is sleeping"
+				}
+			]
+		},
+		{
+			"parts": [
+				{
+					"text": "sleeping"
+				}
+			]
+		},
+		{
+			"parts": [
+				{
+					"text": "Marvin is Sleeping"
+				}
+			]
+		}
+	],
+	"rootFollowupIntentName": "projects/080554cb-19d6-48a0-9aae-e833c6025f7b/agent/intents/4436eedc-7fa2-4b25-8710-3b2da9e60057",
+	"parentFollowupIntentName": "projects/080554cb-19d6-48a0-9aae-e833c6025f7b/agent/intents/4436eedc-7fa2-4b25-8710-3b2da9e60057",
+	"inputContextNames": ["projects/080554cb-19d6-48a0-9aae-e833c6025f7b/agent/sessions/-/contexts/marvin-sleeps-followup"]
+}

@@ -8,6 +8,9 @@ import { IOptional } from "@app/utills/types";
 import Axios from "axios";
 import { Layout, Typography, Row, Col, Button, Icon, Dropdown, Menu } from "antd";
 import { DialogflowModal } from "./components/dialogflow-modal/dialogflow-modal";
+import { Link } from "react-router-dom";
+import { Paths } from "@app/router/router";
+import { DialogflowConversion } from "@app/dialogflow-conversion/dialogflow-conversion";
 
 const { Header, Content } = Layout;
 
@@ -554,10 +557,22 @@ export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
 		);
 	};
 
+	const buildToGoogle = () => {
+		const conversion = new DialogflowConversion(data);
+		const res = conversion.convert();
+		conversion.build();
+
+		console.log(res);
+		console.log(JSON.stringify(res));
+	};
+
 	return (
 		<Layout>
 			<Header style={{ padding: "0 20px" }}>
 				<Row type="flex" justify="space-between" align="middle">
+					<Col>
+						<Link to={Paths.Root}>Chatbot</Link>
+					</Col>
 					<Col>
 						<Typography.Title level={4} style={{ marginBottom: 2, color: "#d8d8d8" }}>
 							{dialogFlowInfo && dialogFlowInfo.name}
@@ -568,6 +583,9 @@ export const IntentBuilder: React.FC<IntentBuilderProps> = props => {
 							<>
 								<Button icon="arrow-left" ghost onClick={discardDialogflow} style={{ marginRight: 8 }} type="danger">
 									Back
+								</Button>
+								<Button icon="save" ghost onClick={buildToGoogle} style={{ marginRight: 8 }} type="dashed">
+									Build
 								</Button>
 								<Button icon="save" ghost onClick={saveDialogFlow}>
 									Save

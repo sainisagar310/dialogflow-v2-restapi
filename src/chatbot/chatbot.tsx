@@ -7,6 +7,8 @@ import React, { useEffect, useState } from "react";
 import "./chatbot.scss";
 import { Messages } from "./components/message/message";
 import { IMessage, IMessages, MessageType, USERMessage } from "./interfaces/message";
+import { Link } from "react-router-dom";
+import { Paths } from "@app/router/router";
 
 const myClient = new DialogflowSDK("grapeseed-teacher");
 
@@ -82,7 +84,9 @@ export const Chatbot: React.FC<ChatbotProps> = props => {
 	const renderChatbot = (): React.ReactNode => {
 		return (
 			<div className="chat">
-				<div className="chat__header"></div>
+				<div className="chat__header">
+					<Link to={Paths.Builder}>Builder</Link>
+				</div>
 				<div className="chat__body">
 					<Messages messages={messages} />
 					<button onClick={start}>Start</button>

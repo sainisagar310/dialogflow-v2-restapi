@@ -8,7 +8,7 @@ export class DialogflowSDK {
 	private ttsEndpoint = "https://texttospeech.googleapis.com/v1/text:synthesize";
 	private sttEndpoint = "https://speech.googleapis.com/v1/speech:recognize";
 	private session: number = Math.floor(Math.random() * 1000000000);
-	private token: string = "Bearer ya29.c.Kl6bB-n7stvplJNhZRwXx0WmGuN7LDls1MpFF2ot_tEfxIisop6HaFiidioXVuPMo1xkhFlTsuvH2wqam29cdHZsT_nACXFYwfTfxuDi1xuhZxxN12HuUfsAFR6mEp1p";
+	private token: string = "Bearer ya29.c.Kl6yBxqaA4G9mgvL_kgiDKHinBPYUkQQiPmVWmjYUca36YRj_yo5bk3TJIqdwg_nzMSuFO3TupCRsjq16tnDzzRxads2g8bWm29OhNE4k9UVSFNiLKC7fi8cw0AvU1uD";
 
 	public stream: DialogflowStream = new DialogflowStream(this.token);
 

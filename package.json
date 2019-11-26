@@ -6,7 +6,9 @@
 	"scripts": {
 		"start": "cross-env NODE_ENV=dev webpack-dev-server --progress",
 		"build:test": "cross-env NODE_ENV=test webpack --progress",
-		"build:prod": "cross-env NODE_ENV=prod webpack --progress"
+		"build:prod": "cross-env NODE_ENV=prod webpack --progress",
+		"set-keyfile": "set GOOGLE_APPLICATION_CREDENTIALS=E:/dialogflow-web/grapeseed-teacher-a08441f8c820.json",
+		"get-token": "gcloud auth application-default print-access-token"
 	},
 	"author": "",
 	"license": "ISC",
